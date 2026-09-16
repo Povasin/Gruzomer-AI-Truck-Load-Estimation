@@ -1,0 +1,22 @@
+{
+  "seed": 20260915,
+  "alpha": 100.0,
+  "features": 233,
+  "train_count": 716,
+  "fit_count": 573,
+  "validation_count": 143,
+  "fit_group_count": 520,
+  "validation_group_count": 140,
+  "median": {
+    "mae": 32.98601398601399,
+    "within_10_pct": 9.79020979020979,
+    "count": 143
+  },
+  "ridge": {
+    "mae": 19.116809006351172,
+    "within_10_pct": 32.86713286713287,
+    "count": 143
+  },
+  "selected_method": "ridge",
+  "note": "Method selected on an internal grouped holdout of TRAIN; final model refitted on all TRAIN. No public/private targets used."
+}
