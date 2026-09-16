@@ -1,0 +1,105 @@
+{
+  "split_type": "fixed_precomputed",
+  "train_split": ".\\DataSet\\train\\train_split.csv",
+  "validation_split": ".\\DataSet\\train\\validation_split.csv",
+  "alpha": 100.0,
+  "features": 233,
+  "train_count": 573,
+  "validation_count": 143,
+  "total_count": 716,
+  "train_group_count": 528,
+  "validation_group_count": 132,
+  "image_overlap_count": 0,
+  "group_overlap_count": 0,
+  "median": {
+    "mae": 31.748251748251747,
+    "within_10_pct": 16.083916083916083,
+    "count": 143
+  },
+  "ridge": {
+    "mae": 17.873168914235904,
+    "within_10_pct": 38.46153846153847,
+    "count": 143
+  },
+  "selected_method": "ridge",
+  "split_diagnostics": {
+    "load_bin": {
+      "train": {
+        "0-10": 0.2024432809773124,
+        "10-20": 0.12390924956369982,
+        "20-30": 0.04537521815008726,
+        "30-40": 0.04886561954624782,
+        "40-50": 0.06631762652705062,
+        "50-60": 0.027923211169284468,
+        "60-70": 0.04886561954624782,
+        "70-80": 0.08900523560209424,
+        "80-90": 0.10471204188481675,
+        "90-100": 0.2425828970331588
+      },
+      "validation": {
+        "0-10": 0.14685314685314685,
+        "10-20": 0.13286713286713286,
+        "20-30": 0.04895104895104895,
+        "30-40": 0.04195804195804196,
+        "40-50": 0.06993006993006994,
+        "50-60": 0.013986013986013986,
+        "60-70": 0.09090909090909091,
+        "70-80": 0.09090909090909091,
+        "80-90": 0.11888111888111888,
+        "90-100": 0.24475524475524477
+      },
+      "tv_distance": 0.0764349088956419
+    },
+    "vehicle_type": {
+      "train": {
+        "gazelle": 0.0506108202443281,
+        "truck": 0.9493891797556719
+      },
+      "validation": {
+        "gazelle": 0.055944055944055944,
+        "truck": 0.9440559440559441
+      },
+      "tv_distance": 0.005333235699727861
+    },
+    "cargo_type": {
+      "train": {
+        "blue_full_container": 0.09773123909249563,
+        "blue_open_containers": 0.5828970331588132,
+        "boxes": 0.07155322862129145,
+        "mixed": 0.06806282722513089,
+        "pallets": 0.17975567190226877
+      },
+      "validation": {
+        "blue_full_container": 0.11188811188811189,
+        "blue_open_containers": 0.5804195804195804,
+        "boxes": 0.06293706293706294,
+        "mixed": 0.06993006993006994,
+        "pallets": 0.17482517482517482
+      },
+      "tv_distance": 0.01602411550055529
+    },
+    "viewpoint": {
+      "train": {
+        "inside": 0.8411867364746946,
+        "outside": 0.15881326352530542
+      },
+      "validation": {
+        "inside": 0.8391608391608392,
+        "outside": 0.16083916083916083
+      },
+      "tv_distance": 0.0020258973138553987
+    },
+    "lighting": {
+      "train": {
+        "dark": 0.34554973821989526,
+        "light": 0.6544502617801047
+      },
+      "validation": {
+        "dark": 0.32867132867132864,
+        "light": 0.6713286713286714
+      },
+      "tv_distance": 0.016878409548566647
+    }
+  },
+  "note": "The provided train_split.csv and validation_split.csv were used exactly as-is. No random split generation was performed. Model selection used only the fixed validation split; the final model was then refitted on train + validation."
+}
