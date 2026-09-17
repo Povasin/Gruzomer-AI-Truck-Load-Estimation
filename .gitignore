@@ -2,3 +2,4 @@
 /venv
 /debug_output
 /DataSet
+__pycache__
