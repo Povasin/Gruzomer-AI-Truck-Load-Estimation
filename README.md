@@ -102,3 +102,6 @@ python .\src\baseline.py train `
 python .\src\baseline.py predict ` 
 --model .\models\BasielineV1.npz ` 
 --output ./output_csv/submission_V2.csv
+
+
+

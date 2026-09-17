@@ -34,7 +34,7 @@ def main():
             "Path to CSV report with validation errors, sorted by absolute error"
         ),
     )
-    train_parser.add_argument("--alpha", type=float, default=100.0)
+    train_parser.add_argument("--alpha", type=float, default=70.0)
     train_parser.add_argument(
         "--method",
         choices=["auto", "ridge", "median"],
