@@ -3,7 +3,7 @@
   "train_split": "./DataSet/train/train_split.csv",
   "validation_split": "./DataSet/train/validation_split.csv",
   "alpha": 70.0,
-  "features": 233,
+  "features": 235,
   "train_count": 573,
   "validation_count": 143,
   "total_count": 716,
@@ -17,8 +17,8 @@
     "count": 143
   },
   "ridge": {
-    "mae": 16.922635597137546,
-    "within_10_pct": 43.35664335664335,
+    "mae": 16.3445535711611,
+    "within_10_pct": 40.55944055944056,
     "count": 143
   },
   "selected_method": "ridge",
