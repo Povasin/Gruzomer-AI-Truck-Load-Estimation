@@ -5,7 +5,8 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-sys.path.insert(0, "src")
+# Обеспечиваем корректный импорт из src
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from features import (
     BLUE_HSV_LOWER,
@@ -34,8 +35,22 @@ def draw_infinite_line(image, line, color, thickness=2):
     cv2.line(image, start, end, color, thickness, cv2.LINE_AA)
 
 
-def process_image(image_id, image_dir, output_dir):
-    source = image_dir / f"{image_id}.jpg"
+def find_image_path(image_id, search_dirs):
+    """Ищет файл изображения среди всех указанных папок."""
+    for directory in search_dirs:
+        candidate = directory / f"{image_id}.jpg"
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def process_image(image_id, search_dirs, output_dir):
+    source = find_image_path(image_id, search_dirs)
+    if source is None:
+        dirs_str = ", ".join(str(d) for d in search_dirs)
+        print(f"ОШИБКА: {image_id}.jpg не найден в папках: {dirs_str}")
+        return
+
     image = read_rgb_image(source)
     corners = _find_container_corners(image)
     roi, roi_found = _normalized_container_image(image)
@@ -112,7 +127,7 @@ def process_image(image_id, image_dir, output_dir):
     write_rgb(output_dir / f"{image_id}_blue_overlay.jpg", overlay)
 
     print(
-        f"{image_id}: {status}; roi_found={roi_found:.0f}; "
+        f"{image_id} (из {source.parent.name}): {status}; roi_found={roi_found:.0f}; "
         f"blue_ratio={ratio:.4f}"
     )
 
@@ -123,12 +138,6 @@ def main():
     )
     parser.add_argument("image_ids", nargs="+", help="image_id без расширения")
     parser.add_argument(
-        "--images",
-        type=Path,
-        default=Path("./DataSet/train/images"),
-        help="Каталог исходных JPG",
-    )
-    parser.add_argument(
         "--output",
         type=Path,
         default=Path("debug_output"),
@@ -137,8 +146,14 @@ def main():
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
 
+    # Ищем сразу и в train (где лежит и валидация), и в test
+    search_dirs = [
+        Path("./DataSet/train/images"),
+        Path("./DataSet/test/images"),
+    ]
+
     for image_id in args.image_ids:
-        process_image(image_id, args.images, args.output)
+        process_image(image_id, search_dirs, args.output)
 
     print(f"Файлы сохранены в: {args.output.resolve()}")
 
