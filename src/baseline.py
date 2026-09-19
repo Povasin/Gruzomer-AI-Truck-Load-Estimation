@@ -37,7 +37,7 @@ def main():
     train_parser.add_argument("--alpha", type=float, default=70.0)
     train_parser.add_argument(
         "--method",
-        choices=["auto", "ridge", "median"],
+        choices=["auto", "ridge", "boosting", "median"],
         default="auto",
     )
     train_parser.set_defaults(run=train)

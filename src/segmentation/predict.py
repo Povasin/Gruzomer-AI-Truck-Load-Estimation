@@ -581,3 +581,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# python .\src\segmentation\predict.py --input .\DataSet\train\images\img_18e1e7031747b0aedf08.jpg `

@@ -1,8 +1,10 @@
 from pathlib import Path
 import csv
 import json
+import pickle
 
 import numpy as np
+from sklearn.ensemble import HistGradientBoostingRegressor
 
 from features import features
 from report import make_split_diagnostics, read_split_table, validate_fixed_split
@@ -35,6 +37,29 @@ def predict_ridge(model, x):
     return np.clip(prediction, 0, 100)
 
 
+def fit_boosting(x, y):
+    """Обучаем HistGradientBoostingRegressor с оптимизацией MAE (L1 loss)."""
+    model = HistGradientBoostingRegressor(
+        loss="absolute_error",
+        max_iter=300,
+        learning_rate=0.05,
+        min_samples_leaf=15,
+        max_depth=6,
+        random_state=42,
+    )
+    model.fit(x, y)
+    return model
+
+
+def predict_model(model, method, x):
+    if method == "ridge":
+        return predict_ridge(model, x)
+    elif method == "boosting":
+        return np.clip(model.predict(x), 0, 100)
+    else:
+        raise ValueError(f"Unknown method: {method}")
+
+
 def metrics(y, prediction):
     errors = np.abs(y - prediction)
     return {
@@ -46,9 +71,6 @@ def metrics(y, prediction):
 
 def write_validation_errors(path, rows, actual, prediction):
     """Сохраняем ошибки на validation, начиная с наибольшей абсолютной ошибки."""
-    if len(rows) != len(actual) or len(rows) != len(prediction):
-        raise ValueError("Rows, actual values and predictions must have the same length")
-
     report_rows = []
     for row, actual_value, prediction_value in zip(rows, actual, prediction):
         actual_value = float(actual_value)
@@ -79,71 +101,89 @@ def train(args):
     print(
         "Fixed split loaded: "
         f"train={split_info['train_count']}, "
-        f"validation={split_info['validation_count']}, "
-        f"train_groups={split_info['train_group_count']}, "
-        f"validation_groups={split_info['validation_group_count']}",
+        f"validation={split_info['validation_count']}",
         flush=True,
     )
 
     y_train = np.asarray([float(row["load_pct"]) for row in train_rows], dtype=np.float64)
     y_val = np.asarray([float(row["load_pct"]) for row in val_rows], dtype=np.float64)
+    
     x_train = features(args.images, train_rows)
     x_val = features(args.images, val_rows)
+
+    # 1. Оцениваем Ridge
     ridge = fit_ridge(x_train, y_train, args.alpha)
-    ridge_prediction = predict_ridge(ridge, x_val)
-    ridge_metrics = metrics(y_val, ridge_prediction)
+    ridge_pred = predict_ridge(ridge, x_val)
+    ridge_metrics = metrics(y_val, ridge_pred)
+
+    # 2. Оцениваем Бустинг
+    boosting = fit_boosting(x_train, y_train)
+    boosting_pred = np.clip(boosting.predict(x_val), 0, 100)
+    boosting_metrics = metrics(y_val, boosting_pred)
+
+    # 3. Median baseline
     train_median = float(np.median(y_train))
-    median_prediction = np.full(len(y_val), train_median)
-    median_metrics = metrics(y_val, median_prediction)
+    median_metrics = metrics(y_val, np.full(len(y_val), train_median))
+
+    print(f"Validation MAE -> Ridge: {ridge_metrics['mae']:.3f} | Boosting: {boosting_metrics['mae']:.3f}")
 
     selected = args.method
     if selected == "auto":
-        selected = "ridge" if ridge_metrics["mae"] < median_metrics["mae"] else "median"
+        candidates = {
+            "boosting": boosting_metrics["mae"],
+            "ridge": ridge_metrics["mae"],
+            "median": median_metrics["mae"],
+        }
+        selected = min(candidates, key=candidates.get)
 
-    selected_prediction = (
-        ridge_prediction if selected == "ridge" else median_prediction
-    )
-    write_validation_errors(
-        args.errors_output,
-        val_rows,
-        y_val,
-        selected_prediction,
-    )
+    if selected == "boosting":
+        selected_prediction = boosting_pred
+    elif selected == "ridge":
+        selected_prediction = ridge_pred
+    else:
+        selected_prediction = np.full(len(y_val), train_median)
 
+    write_validation_errors(args.errors_output, val_rows, y_val, selected_prediction)
+
+    # Дообучение выбранного метода на train + validation
     all_rows = train_rows + val_rows
     y_all = np.concatenate([y_train, y_val])
     x_all = np.concatenate([x_train, x_val], axis=0)
-    final = fit_ridge(x_all, y_all, args.alpha)
-    final.update(
-        method=np.asarray(selected),
-        median=np.asarray(float(np.median(y_all))),
-    )
 
     model_path = Path(args.model)
     model_path.parent.mkdir(parents=True, exist_ok=True)
-    np.savez_compressed(model_path, **final)
+
+    if selected == "boosting":
+        final_model = fit_boosting(x_all, y_all)
+        payload = {
+            "method": "boosting",
+            "model": final_model,
+            "median": float(np.median(y_all)),
+        }
+        with open(model_path.with_suffix(".pkl"), "wb") as f:
+            pickle.dump(payload, f)
+    else:
+        final_ridge = fit_ridge(x_all, y_all, args.alpha)
+        final_ridge.update(
+            method=np.asarray(selected),
+            median=np.asarray(float(np.median(y_all))),
+        )
+        np.savez_compressed(model_path, **final_ridge)
 
     diagnostics = make_split_diagnostics(train_rows, val_rows)
     report = {
         "split_type": "fixed_precomputed",
         "train_split": str(args.train_split),
         "validation_split": str(args.validation_split),
-        "alpha": float(args.alpha),
         "features": int(x_train.shape[1]),
-        "train_count": int(len(train_rows)),
-        "validation_count": int(len(val_rows)),
-        "total_count": int(len(all_rows)),
-        "train_group_count": int(split_info["train_group_count"]),
-        "validation_group_count": int(split_info["validation_group_count"]),
-        "image_overlap_count": 0,
-        "group_overlap_count": 0,
         "median": median_metrics,
         "ridge": ridge_metrics,
+        "boosting": boosting_metrics,
         "selected_method": selected,
-        "split_diagnostics": diagnostics
+        "split_diagnostics": diagnostics,
     }
 
     report_path = model_path.with_suffix(".json")
     report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
     print(json.dumps(report, indent=2, ensure_ascii=False))
-    print(f"Validation error report saved to: {args.errors_output}")
+    print(f"Validation report saved: {args.errors_output}")

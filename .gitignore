@@ -2,4 +2,6 @@
 /venv
 /debug_output
 /DataSet
-__pycache__
+__pycache__/
+/src/floor_segmentation/models/*.pt
+/src/segmentation/models/*.pth
