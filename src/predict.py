@@ -24,6 +24,7 @@ def predict(args):
         return predict_hybrid(args)
 
     rows = read_test_table(args.test_csv)
+    model_path = Path(args.model)
 
     if method == "median":
         values = np.full(len(rows), float(model["median"]))

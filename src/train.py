@@ -4,6 +4,7 @@ import json
 import pickle
 
 import numpy as np
+from sklearn.ensemble import HistGradientBoostingRegressor
 
 from report import make_split_diagnostics, read_split_table, validate_fixed_split
 
