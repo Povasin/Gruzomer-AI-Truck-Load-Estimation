@@ -2,11 +2,20 @@
 
 import argparse
 
-from predict import predict
-from train import train
+def train(args):
+    if args.method == "hybrid":
+        from hybrid import train as run
+    else:
+        from train import train as run
+    run(args)
 
 
-def main():
+def predict(args):
+    from predict import predict as run
+    run(args)
+
+
+def build_parser():
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -37,9 +46,21 @@ def main():
     train_parser.add_argument("--alpha", type=float, default=70.0)
     train_parser.add_argument(
         "--method",
-        choices=["auto", "ridge", "median"],
-        default="auto",
+        choices=["hybrid", "auto", "ridge", "boosting", "median"],
+        default="hybrid",
+        help="hybrid: CNN + 277 признаков (по умолчанию); auto: прежний выбор регрессора",
     )
+    train_parser.add_argument("--backbone", default="resnet18")
+    train_parser.add_argument("--img-size", type=int, default=320)
+    train_parser.add_argument("--phase1-epochs", type=int, default=6)
+    train_parser.add_argument("--phase2-epochs", type=int, default=18)
+    train_parser.add_argument("--head-lr", type=float, default=1e-3)
+    train_parser.add_argument("--backbone-lr", type=float, default=1e-4)
+    train_parser.add_argument("--aux-weight", type=float, default=0.2)
+    train_parser.add_argument("--patience", type=int, default=6)
+    train_parser.add_argument("--seed", type=int, default=42)
+    train_parser.add_argument("--amp", action="store_true")
+    train_parser.add_argument("--no-pretrained", action="store_true", help="Не скачивать ImageNet-веса; обучение с нуля")
     train_parser.set_defaults(run=train)
 
     predict_parser = sub.add_parser("predict")
@@ -49,7 +70,18 @@ def main():
     predict_parser.add_argument("--output",required=True, default="./output_csv/submission_check.csv")
     predict_parser.set_defaults(run=predict)
 
-    args = parser.parse_args()
+    for command_parser in (train_parser, predict_parser):
+        command_parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
+        command_parser.add_argument("--batch-size", type=int, default=16)
+        command_parser.add_argument("--num-workers", type=int, default=0)
+        command_parser.add_argument("--truck-weights", help="Веса сегментации кузова для гибрида")
+        command_parser.add_argument("--floor-weights", help="Веса сегментации пола для гибрида")
+        command_parser.add_argument("--feature-cache", help="Каталог кэша 277 признаков")
+    return parser
+
+
+def main():
+    args = build_parser().parse_args()
     args.run(args)
 
 

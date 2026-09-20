@@ -64,8 +64,6 @@ def read_split_table(path):
 
         rows = list(reader)
 
-    _validate_image_ids(rows, path)
-
     for row_number, row in enumerate(rows, start=2):
         for field in METADATA_FIELDS:
             value = row.get(field)
@@ -74,6 +72,8 @@ def read_split_table(path):
                     f"{path}: empty value in column {field!r}, CSV row {row_number}"
                 )
             row[field] = str(value).strip()
+
+    _validate_image_ids(rows, path)
 
     y = np.asarray([float(row["load_pct"]) for row in rows], dtype=np.float64)
 
