@@ -2,9 +2,11 @@
 
 import argparse
 
+from manual.feature_schema import TOTAL_FEATURE_DIM
+
 def train(args):
     if args.method == "hybrid":
-        from hybrid import train as run
+        from hybrid.hybrid import train as run
     else:
         from train import train as run
     run(args)
@@ -48,7 +50,7 @@ def build_parser():
         "--method",
         choices=["hybrid", "auto", "ridge", "boosting", "median"],
         default="hybrid",
-        help="hybrid: CNN + 277 признаков (по умолчанию); auto: прежний выбор регрессора",
+        help=f"hybrid: CNN + {TOTAL_FEATURE_DIM} признаков (по умолчанию); auto: прежний выбор регрессора",
     )
     train_parser.add_argument("--backbone", default="resnet18")
     train_parser.add_argument("--img-size", type=int, default=320)
@@ -74,9 +76,9 @@ def build_parser():
         command_parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
         command_parser.add_argument("--batch-size", type=int, default=16)
         command_parser.add_argument("--num-workers", type=int, default=0)
-        command_parser.add_argument("--truck-weights", help="Веса сегментации кузова для гибрида")
-        command_parser.add_argument("--floor-weights", help="Веса сегментации пола для гибрида")
-        command_parser.add_argument("--feature-cache", help="Каталог кэша 277 признаков")
+        command_parser.add_argument("--truck-weights", default="./src/manual/truck_segmentation/models/best_unet_resnet18.pth", help="Веса сегментации кузова для гибрида")
+        command_parser.add_argument("--floor-weights", default="./src/manual/floor_segmentation/models/floor_unet_resnet18_lr1e3.best_loss.pt", help="Веса сегментации пола для гибрида")
+        command_parser.add_argument("--feature-cache", help=f"Каталог кэша {TOTAL_FEATURE_DIM} признаков")
     return parser
 
 

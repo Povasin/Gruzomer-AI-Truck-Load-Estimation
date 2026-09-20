@@ -95,7 +95,7 @@ def write_validation_errors(path, rows, actual, prediction):
 
 
 def train(args):
-    from features import features
+    from manual.features import features
 
     train_rows = read_split_table(args.train_split)
     val_rows = read_split_table(args.validation_split)

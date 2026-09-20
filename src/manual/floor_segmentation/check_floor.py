@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from runtime import predict_floor_mask
+from manual.floor_segmentation.runtime import predict_floor_mask
 
 
 def main():

@@ -20,7 +20,7 @@ def predict(args):
         method = str(model["method"])
 
     if method == "hybrid":
-        from hybrid import predict as predict_hybrid
+        from hybrid.hybrid import predict as predict_hybrid
         return predict_hybrid(args)
 
     rows = read_test_table(args.test_csv)
@@ -29,13 +29,13 @@ def predict(args):
     if method == "median":
         values = np.full(len(rows), float(model["median"]))
     elif method == "boosting":
-        from features import features
+        from manual.features import features
         x_test = features(args.images, rows)
         values = np.clip(model.predict(x_test), 0, 100)
     elif method == "ridge":
         from train import predict_ridge
 
-        from features import features
+        from manual.features import features
         x_test = features(args.images, rows)
         values = predict_ridge(model, x_test)
     else:

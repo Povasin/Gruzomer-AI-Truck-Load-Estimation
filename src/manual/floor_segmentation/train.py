@@ -14,8 +14,8 @@ try:
     from .dataset import FloorSegmentationDataset
     from .model import FloorUNet
 except ImportError:
-    from dataset import FloorSegmentationDataset
-    from model import FloorUNet
+    from CNN.dataset import FloorSegmentationDataset
+    from CNN.model import FloorUNet
 
 
 class BCEDiceLoss(nn.Module):

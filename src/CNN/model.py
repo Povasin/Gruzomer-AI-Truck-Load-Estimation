@@ -9,6 +9,8 @@ import timm
 import torch
 import torch.nn as nn
 
+from manual.feature_schema import TOTAL_FEATURE_DIM
+
 
 class TruckLoadNet(nn.Module):
     def __init__(
@@ -65,9 +67,9 @@ class TruckLoadNet(nn.Module):
 
 
 class HybridTruckLoadNet(TruckLoadNet):
-    """CNN-вектор и 277 прежних признаков объединяются перед регрессией."""
+    """CNN-вектор и числовые признаки объединяются перед регрессией."""
 
-    numeric_dim = 277
+    numeric_dim = TOTAL_FEATURE_DIM
 
     def __init__(self, backbone_name="resnet18", pretrained=True,
                  numeric_mean=None, numeric_scale=None):
@@ -75,7 +77,7 @@ class HybridTruckLoadNet(TruckLoadNet):
         mean = torch.zeros(self.numeric_dim) if numeric_mean is None else torch.as_tensor(numeric_mean, dtype=torch.float32)
         scale = torch.ones(self.numeric_dim) if numeric_scale is None else torch.as_tensor(numeric_scale, dtype=torch.float32)
         if mean.shape != (self.numeric_dim,) or scale.shape != (self.numeric_dim,):
-            raise ValueError("Нормализация должна содержать 277 значений")
+            raise ValueError(f"Нормализация должна содержать {self.numeric_dim} значений")
         if not torch.isfinite(mean).all() or not torch.isfinite(scale).all() or (scale <= 0).any():
             raise ValueError("Некорректные параметры нормализации")
         self.register_buffer("numeric_mean", mean.clone())
@@ -87,7 +89,7 @@ class HybridTruckLoadNet(TruckLoadNet):
 
     def forward(self, images, numeric):
         if numeric.ndim != 2 or numeric.shape != (images.shape[0], self.numeric_dim):
-            raise ValueError("Ожидается матрица признаков [batch, 277]")
+            raise ValueError(f"Ожидается матрица признаков [batch, {self.numeric_dim}]")
         if not torch.isfinite(numeric).all():
             raise ValueError("Признаки содержат NaN/Inf")
         visual = self.dropout(self.backbone(images))

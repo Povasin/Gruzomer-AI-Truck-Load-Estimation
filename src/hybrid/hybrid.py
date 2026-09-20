@@ -1,4 +1,4 @@
-"""Единое обучение и прогноз CNN + 277 признаков на фиксированном split."""
+"""Единое обучение и прогноз CNN + числовые признаки на фиксированном split."""
 
 import json
 import math
@@ -10,13 +10,14 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
-from dataset import build_transforms, LOAD_BIN_TO_IDX, CARGO_TYPE_TO_IDX
-from hybrid_artifacts import load_checkpoint, read_metadata, save_checkpoint
-from hybrid_features import (
+from CNN.dataset import build_transforms, LOAD_BIN_TO_IDX, CARGO_TYPE_TO_IDX
+from hybrid.hybrid_artifacts import load_checkpoint, read_metadata, save_checkpoint
+from hybrid.hybrid_features import (
+    FEATURE_DIM,
     build_contract, cached_samples, fit_normalization, resolve_saved_path,
     validate_features, verify_contract,
 )
-from model import HybridTruckLoadNet
+from CNN.model import HybridTruckLoadNet
 from report import read_split_table, read_test_table, validate_fixed_split, make_split_diagnostics
 from submission import write_submission
 
@@ -224,7 +225,7 @@ def train(args):
     train_dataset = HybridDataset(train_rows, train_entries, args.img_size, x_train, targets=True)
     val_dataset = HybridDataset(val_rows, val_entries, args.img_size, x_val, targets=True)
     normalization = fit_normalization(x_train)
-    print(f"Обучение CNN + 277 признаков; устройство: {device}", flush=True)
+    print(f"Обучение CNN + {FEATURE_DIM} признаков; устройство: {device}", flush=True)
     model, best_epoch, prediction, history = fit_model(args, train_dataset, normalization, device,
                                                      validation_dataset=val_dataset)
     y_val = np.asarray([float(row["load_pct"]) for row in val_rows])
@@ -254,7 +255,7 @@ def train(args):
     final_model, _, _, final_history = fit_model(args, all_dataset, fit_normalization(x_all), device,
                                                 epochs=best_epoch)
     save_checkpoint(paths["model"], final_model, {**metadata, "role": "final", "fit_count": len(all_rows)})
-    report = {"selected_method": "hybrid", "features": 277, "hybrid": validation_metrics,
+    report = {"selected_method": "hybrid", "features": FEATURE_DIM, "hybrid": validation_metrics,
               "split_type": "fixed_precomputed", **split_info,
               "train_split": str(args.train_split), "validation_split": str(args.validation_split),
               "split_diagnostics": make_split_diagnostics(train_rows, val_rows),

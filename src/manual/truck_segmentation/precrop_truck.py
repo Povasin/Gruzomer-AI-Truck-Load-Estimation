@@ -41,7 +41,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from segmentation.runtime import predict_truck_mask
+from manual.truck_segmentation.runtime import predict_truck_mask
 
 
 VALID_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}

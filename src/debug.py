@@ -5,158 +5,119 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-# Обеспечиваем корректный импорт из src
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+"""Визуальная проверка truck- и floor-сегментации для одного изображения."""
 
-from features import (
-    BLUE_HSV_LOWER,
-    BLUE_HSV_UPPER,
-    _find_container_corners,
-    _line_candidates,
-    _normalized_container_image,
-    _resize_for_detection,
-    read_rgb_image,
+SRC_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SRC_DIR.parent
+sys.path.insert(0, str(SRC_DIR))
+
+from manual.floor_segmentation.runtime import predict_floor_mask
+from manual.truck_segmentation.runtime import predict_truck_mask
+from manual.features import read_rgb_image
+
+DEFAULT_TRUCK_WEIGHTS = (
+    SRC_DIR / "manual" / "truck_segmentation" / "models" / "best_unet_resnet18.pth"
 )
-
+DEFAULT_FLOOR_WEIGHTS = (
+    SRC_DIR / "manual" / "floor_segmentation" / "models"
+    / "floor_unet_resnet18_lr1e3.best_loss.pt"
+)
 
 def write_rgb(path, image):
     cv2.imwrite(str(path), cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
 
+def mask_overlay(image, mask, color, alpha=0.45):
+    overlay = image.copy()
+    overlay[mask > 0] = color
+    return cv2.addWeighted(image, 1.0 - alpha, overlay, alpha, 0)
 
-def draw_infinite_line(image, line, color, thickness=2):
-    height, width = image.shape[:2]
-    a, b, c = line
-    if abs(a) >= abs(b):
-        start = (int(round(-c / a)), 0)
-        end = (int(round(-(b * (height - 1) + c) / a)), height - 1)
-    else:
-        start = (0, int(round(-c / b)))
-        end = (width - 1, int(round(-(a * (width - 1) + c) / b)))
-    cv2.line(image, start, end, color, thickness, cv2.LINE_AA)
+def mask_image(mask):
+    return (mask.astype(np.uint8) * 255)
 
+def draw_contours(image, mask, color):
+    result = image.copy()
+    contours, _ = cv2.findContours(mask_image(mask), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cv2.drawContours(result, contours, -1, color, 3)
+    return result
 
-def find_image_path(image_id, search_dirs):
-    """Ищет файл изображения среди всех указанных папок."""
-    for directory in search_dirs:
-        candidate = directory / f"{image_id}.jpg"
-        if candidate.is_file():
-            return candidate
-    return None
-
-
-def process_image(image_id, search_dirs, output_dir):
-    source = find_image_path(image_id, search_dirs)
-    if source is None:
-        dirs_str = ", ".join(str(d) for d in search_dirs)
-        print(f"ОШИБКА: {image_id}.jpg не найден в папках: {dirs_str}")
-        return
-
-    image = read_rgb_image(source)
-    corners = _find_container_corners(image)
-    roi, roi_found = _normalized_container_image(image)
-
-    detection_image, _ = _resize_for_detection(image)
-    gray = cv2.cvtColor(detection_image, cv2.COLOR_RGB2GRAY)
-    enhanced = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)).apply(gray)
-    edges = cv2.Canny(enhanced, 40, 120, apertureSize=3)
-    vertical, horizontal = _line_candidates(edges)
-
-    segments_image = detection_image.copy()
-    for candidate in vertical:
-        for x1, y1, x2, y2 in candidate["segments"]:
-            cv2.line(
-                segments_image,
-                (int(x1), int(y1)),
-                (int(x2), int(y2)),
-                (0, 255, 0),
-                1,
-                cv2.LINE_AA,
-            )
-    for candidate in horizontal:
-        for x1, y1, x2, y2 in candidate["segments"]:
-            cv2.line(
-                segments_image,
-                (int(x1), int(y1)),
-                (int(x2), int(y2)),
-                (255, 165, 0),
-                1,
-                cv2.LINE_AA,
-            )
-
-    merged_image = detection_image.copy()
-    for candidate in vertical:
-        draw_infinite_line(merged_image, candidate["line"], (0, 255, 0))
-    for candidate in horizontal:
-        draw_infinite_line(merged_image, candidate["line"], (255, 165, 0))
-
-    outline = image.copy()
-    if corners is not None:
-        cv2.polylines(
-            outline,
-            [corners.astype(np.int32)],
-            True,
-            (0, 255, 0),
-            5,
-        )
-        status = "ROI найден"
-    else:
-        cv2.putText(
-            outline,
-            "ROI not found: full frame",
-            (20, 40),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (255, 0, 0),
-            2,
-        )
-        status = "ROI не найден, использован полный кадр"
-
-    hsv = cv2.cvtColor(roi, cv2.COLOR_RGB2HSV)
-    mask = cv2.inRange(hsv, BLUE_HSV_LOWER, BLUE_HSV_UPPER)
-    ratio = np.count_nonzero(mask) / mask.size
-    overlay = roi.copy()
-    overlay[mask > 0] = (255, 0, 0)
-    overlay = cv2.addWeighted(roi, 0.55, overlay, 0.45, 0)
-
-    cv2.imwrite(str(output_dir / f"{image_id}_edges.png"), edges)
-    write_rgb(output_dir / f"{image_id}_segments.jpg", segments_image)
-    write_rgb(output_dir / f"{image_id}_merged_lines.jpg", merged_image)
-    write_rgb(output_dir / f"{image_id}_outline.jpg", outline)
-    write_rgb(output_dir / f"{image_id}_roi.jpg", roi)
-    cv2.imwrite(str(output_dir / f"{image_id}_blue_mask.png"), mask)
-    write_rgb(output_dir / f"{image_id}_blue_overlay.jpg", overlay)
-
-    print(
-        f"{image_id} (из {source.parent.name}): {status}; roi_found={roi_found:.0f}; "
-        f"blue_ratio={ratio:.4f}"
+def process_image(image_path, output_dir, truck_weights, floor_weights):
+    image = read_rgb_image(image_path)
+    truck_mask = predict_truck_mask(
+        image,
+        threshold=0.5,
+        weights_path=truck_weights,
+    )
+    floor_mask = predict_floor_mask(
+        image,
+        truck_mask=truck_mask,
+        threshold=0.5,
+        weights_path=floor_weights,
     )
 
+    output_dir.mkdir(parents=True, exist_ok=True)
+    stem = image_path.stem
+    write_rgb(output_dir / f"{stem}_original.jpg", image)
+    cv2.imwrite(str(output_dir / f"{stem}_truck_mask.png"), mask_image(truck_mask))
+    cv2.imwrite(str(output_dir / f"{stem}_floor_mask.png"), mask_image(floor_mask))
+    write_rgb(
+        output_dir / f"{stem}_truck_overlay.jpg",
+        mask_overlay(image, truck_mask, (0, 255, 0)),
+    )
+    write_rgb(
+        output_dir / f"{stem}_floor_overlay.jpg",
+        mask_overlay(image, floor_mask, (0, 0, 255)),
+    )
+
+    combined = mask_overlay(image, truck_mask, (0, 255, 0), alpha=0.25)
+    combined = mask_overlay(combined, floor_mask, (255, 0, 0), alpha=0.45)
+    combined = draw_contours(combined, truck_mask, (0, 255, 0))
+    combined = draw_contours(combined, floor_mask, (255, 0, 0))
+    write_rgb(output_dir / f"{stem}_combined_overlay.jpg", combined)
+
+    truck_ratio = float(np.mean(truck_mask > 0))
+    floor_ratio = float(np.mean(floor_mask > 0))
+    print(f"Изображение: {image_path}")
+    print(f"Truck mask: {truck_mask.shape}, площадь={truck_ratio:.4%}")
+    print(f"Floor mask: {floor_mask.shape}, площадь={floor_ratio:.4%}")
+    print(f"Результаты сохранены в: {output_dir.resolve()}")
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Сохраняет промежуточные изображения поиска проёма кузова."
+        description="Показывает результаты truck_segmentation и floor_segmentation."
     )
-    parser.add_argument("image_ids", nargs="+", help="image_id без расширения")
+    parser.add_argument("image", type=Path, help="Путь к исходному изображению")
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("debug_output"),
-        help="Каталог отладочных изображений",
+        default=PROJECT_ROOT / "debug_output" / "segmentation",
+        help="Каталог для масок и наложений",
+    )
+    parser.add_argument(
+        "--truck-weights",
+        type=Path,
+        default=DEFAULT_TRUCK_WEIGHTS,
+        help="Веса сегментации кузова",
+    )
+    parser.add_argument(
+        "--floor-weights",
+        type=Path,
+        default=DEFAULT_FLOOR_WEIGHTS,
+        help="Веса сегментации пола",
     )
     args = parser.parse_args()
-    args.output.mkdir(parents=True, exist_ok=True)
 
-    # Ищем сразу и в train (где лежит и валидация), и в test
-    search_dirs = [
-        Path("./DataSet/train/images"),
-        Path("./DataSet/test/images"),
-    ]
+    image_path = args.image.resolve()
+    truck_weights = args.truck_weights.resolve()
+    floor_weights = args.floor_weights.resolve()
+    for label, path in (
+        ("изображение", image_path),
+        ("truck-веса", truck_weights),
+        ("floor-веса", floor_weights),
+    ):
+        if not path.is_file():
+            raise FileNotFoundError(f"Не найден {label}: {path}")
 
-    for image_id in args.image_ids:
-        process_image(image_id, search_dirs, args.output)
-
-    print(f"Файлы сохранены в: {args.output.resolve()}")
-
+    process_image(image_path, args.output.resolve(), truck_weights, floor_weights)
 
 if __name__ == "__main__":
     main()

@@ -32,8 +32,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from dataset import TruckLoadDataset
-from model import TruckLoadNet
+from CNN.dataset import TruckLoadDataset
+from CNN.model import TruckLoadNet
 
 
 def rows_from_dataframe(df):

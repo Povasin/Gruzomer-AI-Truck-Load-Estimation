@@ -4,7 +4,7 @@ import random
 import cv2
 import numpy as np
 
-from segmentation.runtime import predict_truck_mask
+from manual.truck_segmentation.runtime import predict_truck_mask
 
 
 # =========================================================

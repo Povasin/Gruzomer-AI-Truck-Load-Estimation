@@ -5,7 +5,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from floor_segmentation.model import FloorUNet
+from manual.floor_segmentation.model import FloorUNet
 
 IMAGENET_MEAN = np.array(
     [

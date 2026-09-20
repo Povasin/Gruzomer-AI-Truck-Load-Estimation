@@ -8,12 +8,13 @@ from albumentations.pytorch import ToTensorV2
 import segmentation_models_pytorch as smp
 
 
-PROJECT_DIR = Path(__file__).resolve().parents[2]
+PROJECT_DIR = Path(__file__).resolve().parents[3]
 
 MODEL_PATH = (
     PROJECT_DIR
     / "src"
-    / "segmentation"
+    / "manual"
+    / "truck_segmentation"
     / "models"
     / "best_unet_resnet18.pth"
 )

@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from model import HybridTruckLoadNet
+from CNN.model import HybridTruckLoadNet
 
 FORMAT_VERSION = 1
 
