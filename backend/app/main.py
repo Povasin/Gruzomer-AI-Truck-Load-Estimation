@@ -18,7 +18,7 @@ app = FastAPI(title="Load Vision API", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.getenv(
-        "FRONTEND_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
+        "FRONTEND_ORIGINS", "https://roi-floor-roof-seg.vercel.app"
     ).split(","),
     allow_credentials=False,
     allow_methods=["GET", "POST"],

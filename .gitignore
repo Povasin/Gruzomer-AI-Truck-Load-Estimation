@@ -25,3 +25,4 @@ AGENTS.md
 *pt
 /no
 frontend/node_modules
+.pytest_cache
