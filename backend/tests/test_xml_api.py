@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 from app import main
+from app.repository import MemoryPredictionRepository
 
 
 def image_payload() -> bytes:
@@ -13,7 +14,17 @@ def image_payload() -> bytes:
 
 
 def test_prediction_can_be_returned_as_xml(monkeypatch):
-    monkeypatch.setattr(main, "estimate_load", lambda _image: 67)
+    monkeypatch.setattr(
+        main,
+        "estimate_load",
+        lambda _image: {
+            "load_pct": 67,
+            "cargo_type": "boxes",
+            "models_count": 1,
+            "backbone": "convnext_tiny",
+        },
+    )
+    monkeypatch.setattr(main, "repository", MemoryPredictionRepository())
     client = TestClient(main.app)
 
     response = client.post(

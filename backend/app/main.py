@@ -8,11 +8,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from PIL import UnidentifiedImageError
 
 from .estimator import estimate_load
-from .repository import MemoryPredictionRepository
+from .repository import SupabasePredictionRepository
 
 ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_IMAGE_BYTES = 10 * 1024 * 1024
-repository = MemoryPredictionRepository()
+
+
+def create_repository() -> SupabasePredictionRepository:
+    from supabase import create_client
+
+    url = os.environ["SUPABASE_URL"]
+    secret_key = os.environ["SUPABASE_SECRET_KEY"]
+    return SupabasePredictionRepository(create_client(url, secret_key))
+
+
+repository = create_repository()
 
 app = FastAPI(title="Load Vision API", version="0.1.0")
 app.add_middleware(

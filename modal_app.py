@@ -31,6 +31,7 @@ image = (
         "opencv-python-headless>=4.10",
         "timm>=1.0",
         "albumentations>=2.0",
+        "supabase==2.31.0",
     )
 
     # Скачиваем модель один раз во время build.
@@ -66,6 +67,12 @@ image = (
 
 @app.function(
     image=image,
+    secrets=[
+        modal.Secret.from_name(
+            "custom-secret",
+            required_keys=["SUPABASE_URL", "SUPABASE_SECRET_KEY"],
+        )
+    ],
     memory=3072,
     cpu=1,
     timeout=300,
