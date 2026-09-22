@@ -17,3 +17,11 @@ models/*.pkl
 models/*.npz
 *.rar
 *.zip
+/kaggle
+/docs
+AGENTS.md
+/CV/DataSet
+*pth
+*pt
+/no
+frontend/node_modules
