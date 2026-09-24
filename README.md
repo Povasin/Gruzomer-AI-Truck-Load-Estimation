@@ -28,7 +28,7 @@
 ---
 
 <p align="center">
-  <img src="docs/images/gruzomer-ui.png" alt="ГРУЗОМЕР: интерфейс загрузки фотографии" width="100%"/>
+  <img src="check.png" alt="ГРУЗОМЕР: интерфейс загрузки фотографии" width="100%"/>
 </p>
 
 ## Коротко о проекте
@@ -176,7 +176,7 @@ flowchart LR
 5. позже найти результат по `transport_id`.
 
 <p align="center">
-  <img src="docs/images/gruzomer-result.png" alt="ГРУЗОМЕР: результат CV-анализа" width="100%"/>
+  <img src="pek.png" alt="ГРУЗОМЕР: результат CV-анализа" width="100%"/>
 </p>
 
 На скриншоте выше сервис вернул оценку загрузки, тип груза и использованную модель, после чего сохранил результат.
